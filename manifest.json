@@ -1,0 +1,138 @@
+// Set up global constants and functions for the PWA
+const CLIPPY_URL = 'https://upload.wikimedia.org/wikipedia/en/5/5f/Microsoft_Office_Assistant.gif';
+const MESSAGES = [
+    "It looks like you're trying to build a PWA. Need help with the manifest file?",
+    "Hello there! I'm back, and ready to assist.",
+    "Did you know PWAs are the future of ChromeOS apps?",
+    "Tap, tap. Is this thing on?",
+    "Don't forget to set 'display: standalone' in your manifest!",
+    "I can be dragged anywhere in this window!",
+    "Can I offer you some... assistance?"
+];
+
+// Utility function for showing temporary messages
+function showMessage(bubble, message) {
+    bubble.textContent = message;
+    bubble.classList.add('show-bubble');
+    // Hide the bubble after a few seconds
+    setTimeout(() => {
+        bubble.classList.remove('show-bubble');
+    }, 4000);
+}
+
+// Function to initialize and inject Clippy into the document body
+function initializeClippy() {
+    // Check if Clippy is already on screen
+    if (document.getElementById('clippy')) return;
+
+    // 1. Create the main Clippy container
+    const clippy = document.createElement('div');
+    clippy.id = 'clippy';
+    clippy.style.left = '50px'; // Initial position
+    clippy.style.top = '50px';
+
+    // 2. Add the image and bubble elements
+    clippy.innerHTML = `
+        <img id="clippy-img" src="${CLIPPY_URL}" width="60" alt="Clippy Assistant">
+        <div id="bubble"></div>
+    `;
+    
+    document.body.appendChild(clippy);
+
+    const clippyImg = document.getElementById('clippy-img');
+    const bubble = document.getElementById('bubble');
+    
+    // Initial friendly greeting
+    showMessage(bubble, "Welcome to your new PWA!");
+
+    // --- Drag Functionality ---
+    let isDragging = false;
+    let offsetX, offsetY;
+
+    clippyImg.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        clippy.style.cursor = 'grabbing';
+        
+        // Calculate offset relative to the div's current position
+        offsetX = e.clientX - clippy.getBoundingClientRect().left;
+        offsetY = e.clientY - clippy.getBoundingClientRect().top;
+        
+        // Prevent default text selection/image dragging
+        e.preventDefault(); 
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        
+        // Calculate new position
+        let newX = e.clientX - offsetX;
+        let newY = e.clientY - offsetY;
+
+        // Constraint boundaries (optional but recommended)
+        newX = Math.max(0, Math.min(newX, window.innerWidth - clippy.offsetWidth));
+        newY = Math.max(0, Math.min(newY, window.innerHeight - clippy.offsetHeight));
+
+        clippy.style.left = `${newX}px`;
+        clippy.style.top = `${newY}px`;
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            clippy.style.cursor = 'grab';
+        }
+    });
+
+    // Handle touch events for dragging (essential for ChromeOS touchscreens)
+    clippyImg.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        isDragging = true;
+        clippy.style.cursor = 'grabbing';
+        offsetX = touch.clientX - clippy.getBoundingClientRect().left;
+        offsetY = touch.clientY - clippy.getBoundingClientRect().top;
+        e.preventDefault();
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isDragging || e.touches.length === 0) return;
+        const touch = e.touches[0];
+        
+        let newX = touch.clientX - offsetX;
+        let newY = touch.clientY - offsetY;
+
+        newX = Math.max(0, Math.min(newX, window.innerWidth - clippy.offsetWidth));
+        newY = Math.max(0, Math.min(newY, window.innerHeight - clippy.offsetHeight));
+
+        clippy.style.left = `${newX}px`;
+        clippy.style.top = `${newY}px`;
+        e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => {
+        if (isDragging) {
+            isDragging = false;
+            clippy.style.cursor = 'grab';
+        }
+    });
+
+
+    // --- Interaction Functionality (Double-Click/Double-Tap) ---
+    // Use click listener and check for rapid consecutive clicks (or use dblclick)
+    let lastClickTime = 0;
+    const doubleClickDelay = 300; // ms
+
+    clippyImg.addEventListener('click', () => {
+        const now = Date.now();
+        if (now - lastClickTime < doubleClickDelay) {
+            // Double-click/Double-tap detected
+            const randomMessage = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+            showMessage(bubble, randomMessage);
+            lastClickTime = 0; // Reset after a successful double-click
+        } else {
+            lastClickTime = now;
+        }
+    });
+}
+
+// Start the PWA logic once the document is fully loaded
+document.addEventListener('DOMContentLoaded', initializeClippy);
